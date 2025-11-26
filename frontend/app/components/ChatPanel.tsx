@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface ChatPanelProps {
   onSendMessage: (message: string) => void;
@@ -18,10 +18,28 @@ const SUGGESTION_PROMPTS = [
 
 export default function ChatPanel({ onSendMessage, isLoading = false }: ChatPanelProps) {
   const [inputValue, setInputValue] = useState('');
+  const autoSubmitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSuggestionRef = useRef<string | null>(null);
+
+  // Clear timeout if component unmounts or input changes
+  useEffect(() => {
+    return () => {
+      if (autoSubmitTimeoutRef.current) {
+        clearTimeout(autoSubmitTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputValue.trim() && !isLoading) {
+      // Clear any pending auto-submit
+      if (autoSubmitTimeoutRef.current) {
+        clearTimeout(autoSubmitTimeoutRef.current);
+        autoSubmitTimeoutRef.current = null;
+      }
+      pendingSuggestionRef.current = null;
+      
       onSendMessage(inputValue.trim());
       setInputValue('');
     }
@@ -29,7 +47,53 @@ export default function ChatPanel({ onSendMessage, isLoading = false }: ChatPane
 
   const handleSuggestionClick = (suggestion: string) => {
     if (!isLoading) {
-      onSendMessage(suggestion);
+      // Clear any existing timeout
+      if (autoSubmitTimeoutRef.current) {
+        clearTimeout(autoSubmitTimeoutRef.current);
+      }
+      
+      // Populate the input field with the suggestion so user can see what will be analyzed
+      setInputValue(suggestion);
+      pendingSuggestionRef.current = suggestion;
+      
+      // Focus the input field
+      const inputElement = document.querySelector('input[type="text"]') as HTMLInputElement;
+      if (inputElement) {
+        inputElement.focus();
+        inputElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      
+      // Auto-submit after a brief moment to analyze the suggestion
+      // Only if the user hasn't edited the input
+      autoSubmitTimeoutRef.current = setTimeout(() => {
+        // Check if input value still matches the suggestion (user didn't edit it)
+        const inputElement = document.querySelector('input[type="text"]') as HTMLInputElement;
+        const currentValue = inputElement?.value || '';
+        
+        if (pendingSuggestionRef.current === suggestion && 
+            currentValue === suggestion && 
+            !isLoading) {
+          onSendMessage(suggestion);
+          setInputValue('');
+          pendingSuggestionRef.current = null;
+        }
+        autoSubmitTimeoutRef.current = null;
+      }, 500); // Small delay to allow user to see/edit the query
+    }
+  };
+
+  // Track input changes to cancel auto-submit if user edits
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    
+    // If user edits the input, cancel auto-submit
+    if (pendingSuggestionRef.current && newValue !== pendingSuggestionRef.current) {
+      if (autoSubmitTimeoutRef.current) {
+        clearTimeout(autoSubmitTimeoutRef.current);
+        autoSubmitTimeoutRef.current = null;
+      }
+      pendingSuggestionRef.current = null;
     }
   };
 
@@ -41,7 +105,7 @@ export default function ChatPanel({ onSendMessage, isLoading = false }: ChatPane
           <input
             type="text"
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={handleInputChange}
             placeholder="Describe your ideal hotel (e.g., 'Luxury hotel in Tokyo with spa')"
             disabled={isLoading}
             className="flex-1 px-4 py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2"

@@ -2,9 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base, SessionLocal
-from app.api.v1 import blogs
+from app.api.v1 import blogs, recommendations
 from app import crud
 from app.utils.mock_data import get_mock_blog_posts
+# Import models to ensure they're registered with SQLAlchemy
+from app.models import BlogPost, Hotel  # noqa: F401
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -45,6 +47,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(blogs.router, prefix=f"{settings.api_v1_prefix}/blogs", tags=["blogs"])
+app.include_router(recommendations.router, prefix=f"{settings.api_v1_prefix}/recommendations", tags=["recommendations"])
 
 
 @app.get("/")

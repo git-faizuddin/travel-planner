@@ -29,6 +29,7 @@ interface Hotel {
   imageUrl: string;
   price?: string;
   rating?: number;
+  bookingUrl?: string;
 }
 
 // Mock hotel data generator - In a real app, this would call an API
@@ -125,6 +126,7 @@ export default function HomePage() {
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [hotelError, setHotelError] = useState<string | null>(null);
   
   // Blog state
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
@@ -202,18 +204,121 @@ export default function HomePage() {
     }
   };
 
+  // Map backend HotelInfo to frontend Hotel interface
+  const mapBackendHotelToFrontend = (backendHotel: any): Hotel => {
+    // Use raw_data as fallback source for complete booking.com API response
+    const rawData = backendHotel.raw_data || {};
+    const hotel = { ...rawData, ...backendHotel }; // raw_data takes precedence, then explicit fields
+    
+    // Get the first image or use a placeholder
+    // Check multiple possible image field names from booking.com API
+    const images = hotel.images || hotel.imageUrls || hotel.photos || hotel.photo_urls || [];
+    const imageUrl = images && images.length > 0 
+      ? (typeof images[0] === 'string' ? images[0] : images[0].url || images[0].link || '')
+      : 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop';
+    
+    // Format price with proper currency symbol
+    let price: string | undefined = undefined;
+    if (hotel.price) {
+      const currencySymbol = hotel.currency === 'EUR' ? '€' 
+        : hotel.currency === 'USD' ? '$'
+        : hotel.currency === 'GBP' ? '£'
+        : hotel.currency || '$';
+      price = `${currencySymbol}${hotel.price.toFixed(2)}/night`;
+    }
+    
+    // Use rating or review_score, whichever is available
+    const rating = hotel.rating || hotel.review_score || hotel.review_rating;
+    
+    // Build address string - check multiple possible field names
+    const addressParts = [
+      hotel.address || hotel.street || hotel.street_address,
+      hotel.city,
+      hotel.country
+    ].filter(Boolean);
+    const address = addressParts.length > 0 
+      ? addressParts.join(', ')
+      : hotel.city && hotel.country
+      ? `${hotel.city}, ${hotel.country}`
+      : hotel.city || hotel.country || 'Location not specified';
+    
+    // Get coordinates - check multiple possible field names
+    const lat = hotel.latitude || hotel.lat || hotel.coordinates?.lat || hotel.location?.lat || 0;
+    const lng = hotel.longitude || hotel.lng || hotel.coordinates?.lng || hotel.location?.lng || 0;
+    
+    // Get booking.com URL - check multiple possible field names
+    const bookingUrl = hotel.url || hotel.booking_url || hotel.bookingUrl || hotel.link;
+    
+    return {
+      id: hotel.hotel_id || hotel.id || Math.random().toString(36).substr(2, 9),
+      name: hotel.name || 'Unknown Hotel',
+      description: hotel.description || hotel.summary || 'No description available.',
+      location: {
+        address: address,
+        city: hotel.city || '',
+        country: hotel.country || '',
+        lat: lat,
+        lng: lng
+      },
+      imageUrl: imageUrl,
+      price: price,
+      rating: rating ? parseFloat(rating.toFixed(1)) : undefined,
+      bookingUrl: bookingUrl
+    };
+  };
+
   const handleSendMessage = async (message: string) => {
     setIsLoading(true);
     setHasSearched(true);
+    setHotelError(null);
+    setHotels([]);
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    console.log('Sending request with user_demand:', message);
     
-    // Generate mock hotel recommendations
-    const recommendedHotels = generateMockHotels(message);
-    setHotels(recommendedHotels);
-    
-    setIsLoading(false);
+    try {
+      const response = await fetch(`${API_BASE_URL}/recommendations/recommend`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        },
+        cache: 'no-store',
+        body: JSON.stringify({
+          user_demand: message
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error occurred' }));
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      console.log('Received response:', {
+        user_demand: data.user_demand,
+        total_results: data.total_results,
+        hotel_ids: (data.matched_hotels || []).map((h: any) => h.hotel_id)
+      });
+      
+      // Map backend hotels to frontend format
+      const mappedHotels = (data.matched_hotels || []).map(mapBackendHotelToFrontend);
+      
+      if (mappedHotels.length === 0) {
+        setHotelError(data.message || 'No hotels found matching your criteria. Try adjusting your search.');
+      } else {
+        setHotels(mappedHotels);
+      }
+    } catch (error) {
+      console.error('Error fetching hotel recommendations:', error);
+      setHotelError(error instanceof Error ? error.message : 'Failed to fetch hotel recommendations. Please try again.');
+      // Fallback to mock data if API fails (for development)
+      // In production, you might want to show an error message instead
+      // const recommendedHotels = generateMockHotels(message);
+      // setHotels(recommendedHotels);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -250,14 +355,7 @@ export default function HomePage() {
             }}
           >
             <div className="max-w-3xl mx-auto space-y-6">
-              <div className="text-center mb-6">
-                <h2 
-                  className="text-2xl md:text-3xl font-bold mb-4 transition-colors"
-                  style={{ color: 'var(--foreground)' }}
-                >
-                  ⭐ TravelPlannerBro: Intelligent Accommodation Sourcing
-                </h2>
-              </div>
+              
               
               <p 
                 className="text-base leading-relaxed transition-colors"
@@ -350,8 +448,54 @@ export default function HomePage() {
             </div>
           )}
 
+          {/* Error State */}
+          {!isLoading && hasSearched && hotelError && (
+            <div className="text-center py-8">
+              <div 
+                className="inline-block p-4 rounded-lg mb-4"
+                style={{ 
+                  backgroundColor: 'var(--card-bg)',
+                  borderColor: '#ef4444',
+                  borderWidth: '1px',
+                  borderStyle: 'solid'
+                }}
+              >
+                <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#ef4444' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p 
+                  className="text-lg font-semibold mb-2 transition-colors"
+                  style={{ color: '#ef4444' }}
+                >
+                  Error Loading Hotels
+                </p>
+                <p 
+                  className="text-base transition-colors"
+                  style={{ color: 'var(--card-text-secondary)' }}
+                >
+                  {hotelError}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  const lastMessage = document.querySelector('input[type="text"]') as HTMLInputElement;
+                  if (lastMessage) {
+                    handleSendMessage(lastMessage.value || '');
+                  }
+                }}
+                className="px-6 py-2 rounded-lg font-medium transition-all hover:scale-105"
+                style={{
+                  backgroundColor: 'var(--secondary-blue)',
+                  color: '#ffffff'
+                }}
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+
           {/* No Results State */}
-          {!isLoading && hasSearched && hotels.length === 0 && (
+          {!isLoading && hasSearched && !hotelError && hotels.length === 0 && (
             <div className="text-center py-8">
               <p 
                 className="text-lg transition-colors"

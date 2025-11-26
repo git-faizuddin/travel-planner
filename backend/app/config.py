@@ -18,6 +18,14 @@ class Settings(BaseSettings):
     # API settings
     api_v1_prefix: str = "/api/v1"
     
+    # OpenAI settings
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"  # Can use gpt-4o-mini, gpt-4, or gpt-3.5-turbo
+    
+    # Booking.com API settings
+    booking_api_key: str = ""
+    booking_api_url: str = "https://distribution-xml.booking.com/json"
+    
     @model_validator(mode='after')
     def parse_cors_origins(self) -> 'Settings':
         """Convert comma-separated string to list after validation"""

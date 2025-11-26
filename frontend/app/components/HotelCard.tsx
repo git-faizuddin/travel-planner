@@ -14,6 +14,7 @@ interface Hotel {
   imageUrl: string;
   price?: string;
   rating?: number;
+  bookingUrl?: string;
 }
 
 interface HotelCardProps {
@@ -56,12 +57,35 @@ export default function HotelCard({ hotel }: HotelCardProps) {
       {/* Hotel Information */}
       <div className="p-6 flex flex-col flex-grow">
         <div className="flex items-start justify-between mb-3 flex-shrink-0">
-          <h3 
-            className="text-xl font-bold transition-colors line-clamp-2 flex-1"
-            style={{ color: 'var(--card-text)' }}
-          >
-            {hotel.name}
-          </h3>
+          {hotel.bookingUrl ? (
+            <a
+              href={hotel.bookingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xl font-bold transition-all line-clamp-2 flex-1 hover:underline cursor-pointer"
+              style={{ 
+                color: 'var(--card-text)',
+                textDecoration: 'none'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.textDecoration = 'underline';
+                e.currentTarget.style.color = 'var(--secondary-blue)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.textDecoration = 'none';
+                e.currentTarget.style.color = 'var(--card-text)';
+              }}
+            >
+              {hotel.name}
+            </a>
+          ) : (
+            <h3 
+              className="text-xl font-bold transition-colors line-clamp-2 flex-1"
+              style={{ color: 'var(--card-text)' }}
+            >
+              {hotel.name}
+            </h3>
+          )}
           {hotel.rating && (
             <div className="flex items-center gap-1 flex-shrink-0 ml-2">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#fbbf24' }}>
@@ -116,18 +140,20 @@ export default function HotelCard({ hotel }: HotelCardProps) {
         </div>
 
         {/* Google Maps Embed - Fixed at bottom */}
-        <div className="mt-auto rounded-lg overflow-hidden flex-shrink-0" style={{ border: '1px solid var(--card-border)' }}>
-          <iframe
-            width="100%"
-            height="200"
-            style={{ border: 0 }}
-            loading="lazy"
-            allowFullScreen
-            referrerPolicy="no-referrer-when-downgrade"
-            src={mapsUrl}
-            title={`Map showing ${hotel.name}`}
-          ></iframe>
-        </div>
+        {hotel.location.lat !== 0 && hotel.location.lng !== 0 && (
+          <div className="mt-auto rounded-lg overflow-hidden flex-shrink-0" style={{ border: '1px solid var(--card-border)' }}>
+            <iframe
+              width="100%"
+              height="200"
+              style={{ border: 0 }}
+              loading="lazy"
+              allowFullScreen
+              referrerPolicy="no-referrer-when-downgrade"
+              src={mapsUrl}
+              title={`Map showing ${hotel.name}`}
+            ></iframe>
+          </div>
+        )}
       </div>
     </div>
   );
