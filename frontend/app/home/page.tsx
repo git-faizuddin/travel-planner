@@ -595,6 +595,45 @@ export default function HomePage() {
             )}
           </div>
 
+          {/* Traveltalk Plugin Section */}
+          <div className="mt-12 mb-8">
+            <div 
+              className="p-4 md:p-6 rounded-lg text-center"
+              style={{
+                backgroundColor: 'var(--card-bg)',
+                borderColor: 'var(--card-border)',
+                borderWidth: '1px',
+                borderStyle: 'solid'
+              }}
+            >
+              <h2 
+                className="text-base md:text-xl lg:text-2xl font-bold mb-3 transition-colors"
+                style={{ color: 'var(--foreground)' }}
+              >
+                Integrate Travelplannerbro Chat on Your Site
+              </h2>
+              <div 
+                className=" mx-auto text-base text-left md:text-lg leading-relaxed transition-colors"
+                style={{ color: 'var(--card-text)' }}
+              >
+                <p>
+                  Travel sites and travel blogs can integrate a Travelplannerbro chat as a "plugin" on their own websites.
+                
+                  Adding the Travelplannerbro plugin to your site or blog requires just one line of code - and it is free.
+                
+                  Do you own a travel site and want to try it?{' '}
+                  <a
+                    href="mailto:contact@traveltalk.com?subject=Traveltalk Plugin Integration Inquiry"
+                    className="font-semibold underline transition-colors hover:opacity-80"
+                    style={{ color: 'var(--secondary-blue)' }}
+                  >
+                    Send us an email via this link!
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

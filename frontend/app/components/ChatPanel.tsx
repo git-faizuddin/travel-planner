@@ -37,14 +37,14 @@ export default function ChatPanel({ onSendMessage, isLoading = false }: ChatPane
     <div className="w-full max-w-4xl mx-auto">
       {/* Input Field */}
       <form onSubmit={handleSubmit} className="relative mb-6">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-col sm:flex-row">
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Describe your ideal hotel (e.g., 'Luxury hotel in Tokyo with spa')"
             disabled={isLoading}
-            className="flex-1 px-4 py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2"
+            className="flex-1 w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 text-sm sm:text-base"
             onFocus={(e) => {
               e.currentTarget.style.borderColor = 'var(--secondary-blue)';
               e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0, 113, 194, 0.1)';
@@ -64,7 +64,7 @@ export default function ChatPanel({ onSendMessage, isLoading = false }: ChatPane
           <button
             type="submit"
             disabled={isLoading || !inputValue.trim()}
-            className="px-6 py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105"
+            className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 text-sm sm:text-base whitespace-nowrap flex items-center justify-center gap-2"
             style={{
               backgroundColor: 'var(--button-accent)',
               color: '#ffffff'
@@ -79,13 +79,14 @@ export default function ChatPanel({ onSendMessage, isLoading = false }: ChatPane
             }}
           >
             {isLoading ? (
-              <span className="flex items-center gap-2">
+              <>
                 <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Searching...
-              </span>
+                <span className="hidden sm:inline">Searching...</span>
+                <span className="sm:hidden">Search</span>
+              </>
             ) : (
               'Search'
             )}
@@ -101,7 +102,7 @@ export default function ChatPanel({ onSendMessage, isLoading = false }: ChatPane
         >
           Try these suggestions:
         </p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
           {SUGGESTION_PROMPTS.map((prompt, index) => (
             <button
               key={index}
