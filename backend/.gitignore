@@ -9,12 +9,6 @@ venv/
 ENV/
 .venv
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-data/
-
 # Environment
 .env
 .env.local
